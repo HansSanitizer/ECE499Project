@@ -1,31 +1,89 @@
 from matplotlib import pyplot as plt
 import cv2 as cv
 import numpy as np
-bw = cv.imread('Images/4800crop0.png', cv.IMREAD_GRAYSCALE)
+
+# Open scanned image
+
+bw = cv.imread('Images/4800dpitest.jpg', cv.IMREAD_GRAYSCALE)
 height, width = bw.shape
-print("The height is %d", height)
-print("The width is %d", width)
-# Find the large circle (maxima of region of interest)
+print("The original image height is ", height)
+print("The original image width is ", width)
+
+
+
 bwCircle = bw.copy()
 bwCircle = cv.medianBlur(bwCircle, 15)
 # plt.imshow(bwCircle),plt.show()
 print("Blurred image for circle finding")
 rows = bwCircle.shape[0]
+
+# Find the small circle (minima of region of interest, also better for center of record determination)
 circles = cv.HoughCircles(bwCircle, cv.HOUGH_GRADIENT,
                           1, rows/8, param1=80, param2=30,
-                          minRadius=int(width/2 - 100), maxRadius=int(width/2))
+                          minRadius=int(1600), maxRadius=int(1800))
 if circles is None:
     print("Found 0 Circles")
 else:
     circles = np.uint16(np.around(circles))
     for i in circles[0, :]:
-        center = (i[0], i[1])
-        radius = i[2]
-        cv.circle(bwCircle, center, 1, (0, 100, 100), 50)
-        cv.circle(bwCircle, center, radius, (255, 0, 255), 50)
-        print("Detected Circle", i)
-        plt.imshow(bwCircle, cmap=None), plt.show()
-        cv.waitKey(0)
+        centerSmall = (i[0], i[1])
+        #
+        radiusSmall = i[2] + 800
+        # Draw the center of the circle
+        cv.circle(bw, centerSmall, 1, (0, 100, 100), 50)
+        # Draw the circle
+        cv.circle(bw, centerSmall, radiusSmall, (255, 0, 255), 50)
+        print("Detected Small Circle", i)
+
+plt.imshow(bw, cmap=None), plt.show()
+ # For now it appears as though the small circle produced a more center of record result, will change large circle to
+ # match
+
+# Find the large circle (maxima of region of interest)
+circles = cv.HoughCircles(bwCircle, cv.HOUGH_GRADIENT,
+                          1, rows/8, param1=80, param2=30,
+                          minRadius=int(5700), maxRadius=int(6000))
+if circles is None:
+    print("Found 0 Circles")
+else:
+    circles = np.uint16(np.around(circles))
+    for i in circles[0, :]:
+        centerLarge = (i[0], i[1])
+        radiusLarge = i[2] - 100
+        # Draw the center of the circle
+        cv.circle(bw, centerSmall, 1, (0, 100, 100), 50)
+        # Draw the circle
+        cv.circle(bw, centerSmall, radiusLarge, (255, 0, 255), 50)
+        print("Detected Large Circle", i)
+
+plt.imshow(bw, cmap=None), plt.show()
+print("Record Center(x, y) is: ", centerSmall)
+
+# Take Eights of the image from centerSmall to outer edge
+class vyLine:
+    def __init__(self, p1x, p1y, p2x, p2y):
+        self.p1x = p1x
+        self.p1y = p1y
+        self.p2x = p2x
+        self.p2y = p2y
+
+
+#Taken from 0 degrees counter clockwise
+lineOne = vyLine(centerSmall[0] + radiusSmall, centerSmall[1], centerSmall[0] + radiusLarge, centerSmall[1])
+
+
+cv.line(bw, (lineOne.p1x, lineOne.p1y), (lineOne.p2x, lineOne.p2y),
+        (255, 0, 255), 50)
+
+plt.imshow(bw, cmap=None), plt.show()
+
+
+
+
+
+
+
+
 
 # 6153,5827 is approximate center (x,y)
 #
