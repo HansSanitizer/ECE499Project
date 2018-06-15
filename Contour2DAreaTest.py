@@ -5,6 +5,9 @@ print(cv.getBuildInformation())
 # Open scanned image
 
 bw = cv.imread('Images/4800dpitest.jpg', cv.IMREAD_GRAYSCALE)
+# IF THIS NEXT LINE CAUSES TROUBLE, JUST REMOVE IT, IT IS SUPPOSED TO SPEED THINGS UP USING OPENCL
+# REFLINK: https://www.learnopencv.com/opencv-transparent-api/
+bwUmat = cv.UMat(bw)
 height, width = bw.shape
 print("The original image height is ", height)
 print("The original image width is ", width)
@@ -12,13 +15,14 @@ print("The original image width is ", width)
 
 
 bwCircle = bw.copy()
-bwCircle = cv.medianBlur(bwCircle, 15)
+bwCircleUmat = cv.UMat(bwCircle)
+bwCircleBlurred = cv.UMat.get(cv.medianBlur(bwCircleUmat, 15))
 # plt.imshow(bwCircle),plt.show()
 print("Blurred image for circle finding")
 rows = bwCircle.shape[0]
 
 # Find the small circle (minima of region of interest, also better for center of record determination)
-circles = cv.HoughCircles(bwCircle, cv.HOUGH_GRADIENT,
+circles = cv.HoughCircles(bwCircleBlurred, cv.HOUGH_GRADIENT,
                           1, rows/8, param1=80, param2=30,
                           minRadius=int(1600), maxRadius=int(1800))
 if circles is None:
@@ -40,7 +44,7 @@ else:
  # match
 
 # Find the large circle (maxima of region of interest)
-circles = cv.HoughCircles(bwCircle, cv.HOUGH_GRADIENT,
+circles = cv.HoughCircles(bwCircleBlurred, cv.HOUGH_GRADIENT,
                           1, rows/8, param1=80, param2=30,
                           minRadius=int(5700), maxRadius=int(6000))
 if circles is None:
@@ -74,41 +78,62 @@ vinylROI = [0]*numLines
 # Mask creation for finding ROI
 black = np.zeros(bw.shape, np.uint8)
 black2 = np.zeros(bw.shape, np.uint8)
+black3 = np.zeros(bw.shape, np.uint8)
 cv.circle(black, centerSmall, radiusSmall, (255, 255, 255), 50)
 cv.circle(black, centerLarge, radiusLarge, (255, 255, 255), 50)
-# for x in range(0, (numLines - 1)):
-x=0
-recordLine[x] = vyLine(int(centerSmall[0] + radiusSmall * np.cos(x * np.pi / (numLines/2))),
-                       int(centerSmall[1] - radiusSmall * np.sin(x * np.pi / (numLines/2))),
-                       int(centerSmall[0] + radiusLarge * np.cos(x * np.pi / (numLines/2))),
-                       int(centerSmall[1] - radiusLarge * np.sin(x * np.pi / (numLines/2))))
-recordLine[x + 1] = vyLine(int(centerSmall[0] + radiusSmall * np.cos((x+1) * np.pi / (numLines/2))),
-                       int(centerSmall[1] - radiusSmall * np.sin((x+1) * np.pi / (numLines/2))),
-                       int(centerSmall[0] + radiusLarge * np.cos((x+1) * np.pi / (numLines/2))),
-                       int(centerSmall[1] - radiusLarge * np.sin((x+1) * np.pi / (numLines/2))))
-cv.line(black,
-        (recordLine[x].p1x, recordLine[x].p1y),
-        (recordLine[x].p2x, recordLine[x].p2y),
-        (255, 255, 255), 50)
-cv.line(black,
-        (recordLine[x + 1].p1x, recordLine[x + 1].p1y),
-        (recordLine[x + 1].p2x, recordLine[x + 1].p2y),
-        (255, 255, 255), 50)
-thresh_adapt = cv.adaptiveThreshold(black, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
-im2, contours, hierarchy = cv.findContours(black, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
-cv.drawContours(black2, contours, 1, (255,255,255), 50)
-plt.imshow(black2), plt.show()
-print(cv.contourArea(contours[1]))
+# plt.imshow(black2), plt.show(block = False)
 
+for x in range(0, (numLines - 1)):
+    black = np.zeros(bw.shape, np.uint8)
+    cv.circle(black, centerSmall, radiusSmall, (255, 255, 255), 50)
+    cv.circle(black, centerLarge, radiusLarge, (255, 255, 255), 50)
+    recordLine[x] = vyLine(int(centerSmall[0] + radiusSmall * np.cos(x * np.pi / (numLines/2))),
+                           int(centerSmall[1] - radiusSmall * np.sin(x * np.pi / (numLines/2))),
+                           int(centerSmall[0] + radiusLarge * np.cos(x * np.pi / (numLines/2))),
+                           int(centerSmall[1] - radiusLarge * np.sin(x * np.pi / (numLines/2))))
+    recordLine[x + 1] = vyLine(int(centerSmall[0] + radiusSmall * np.cos((x+1) * np.pi / (numLines/2))),
+                           int(centerSmall[1] - radiusSmall * np.sin((x+1) * np.pi / (numLines/2))),
+                           int(centerSmall[0] + radiusLarge * np.cos((x+1) * np.pi / (numLines/2))),
+                           int(centerSmall[1] - radiusLarge * np.sin((x+1) * np.pi / (numLines/2))))
+    cv.line(black,
+            (recordLine[x].p1x, recordLine[x].p1y),
+            (recordLine[x].p2x, recordLine[x].p2y),
+            (255, 255, 255), 50)
+    cv.line(black,
+            (recordLine[x + 1].p1x, recordLine[x + 1].p1y),
+            (recordLine[x + 1].p2x, recordLine[x + 1].p2y),
+            (255, 255, 255), 50)
+
+    blackUmat = cv.UMat(black)
+    thresh_adapt = cv.adaptiveThreshold(blackUmat, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
+    im2, contours, hierarchy = cv.findContours(blackUmat, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    cv.drawContours(black2, contours, 1, (255,255,255), 50)
+    print(cv.arcLength(contours[1], True))
+    # plt.imshow(black2), plt.show()
+    print("Number of contours is")
+    print(len(contours))
+    for i in range(0, len(contours)):
+        print("Looking at contour")
+        print(i)
+        if cv.contourArea(contours[i]) < 1700000 and cv.contourArea(contours[i]) > 1200000:
+            print("conditions were found to be true")
+            print("current contour index is")
+            vinylROI[x] = contours[i]
+            contour_index = i
+            print(contour_index)
+
+    print("Contour Index is:")
+    print(contour_index)
+    black2 = np.zeros(bw.shape, np.uint8)
+    cv.drawContours(black2, contours, contour_index, (255,255,255), 50)
+    cv.drawContours(black3, contours, -1, (255,255,255), 50)
+    #plt.imshow(black2), plt.show()
+    print(hierarchy)
+    print(type(contours))
+    print(len(contours))
 # Find smallest roi contour (probably is a more elegant way to do this)
-print(hierarchy)
-print(type(contours))
-print(len(contours))
+plt.imshow(black3), plt.show()
 
-vinylROI[x] = max(contours, key=cv.contourArea)
-black2 = np.zeros(bw.shape, np.uint8)
-cv.drawContours(black2, vinylROI[x], 0, (255,255,225), 50)
-plt.imshow(black2), plt.show()
 # #Find largest contour
 # largestArea = 0
 # for i in range(0, contours.size()):
