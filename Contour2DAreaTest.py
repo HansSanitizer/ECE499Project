@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 import cv2 as cv
 import numpy as np
-
+print(cv.getBuildInformation())
 # Open scanned image
 
 bw = cv.imread('Images/4800dpitest.jpg', cv.IMREAD_GRAYSCALE)
@@ -35,7 +35,7 @@ else:
         cv.circle(bw, centerSmall, radiusSmall, (255, 0, 255), 50)
         print("Detected Small Circle", i)
 
-plt.imshow(bw, cmap=None), plt.show()
+# plt.imshow(bw, cmap=None), plt.show()
  # For now it appears as though the small circle produced a more center of record result, will change large circle to
  # match
 
@@ -56,7 +56,7 @@ else:
         cv.circle(bw, centerSmall, radiusLarge, (255, 0, 255), 50)
         print("Detected Large Circle", i)
 
-plt.imshow(bw, cmap=None), plt.show()
+# plt.imshow(bw, cmap=None), plt.show()
 print("Record Center(x, y) is: ", centerSmall)
 
 # Take Eights of the image from centerSmall to outer edge
@@ -67,18 +67,57 @@ class vyLine:
         self.p2x = p2x
         self.p2y = p2y
 
+# Define the number of lines (segments*2) that you want to create
+numLines = 48
+recordLine = [0]*numLines
+vinylROI = [0]*numLines
+# Mask creation for finding ROI
+black = np.zeros(bw.shape, np.uint8)
+black2 = np.zeros(bw.shape, np.uint8)
+cv.circle(black, centerSmall, radiusSmall, (255, 255, 255), 50)
+cv.circle(black, centerLarge, radiusLarge, (255, 255, 255), 50)
+# for x in range(0, (numLines - 1)):
+x=0
+recordLine[x] = vyLine(int(centerSmall[0] + radiusSmall * np.cos(x * np.pi / (numLines/2))),
+                       int(centerSmall[1] - radiusSmall * np.sin(x * np.pi / (numLines/2))),
+                       int(centerSmall[0] + radiusLarge * np.cos(x * np.pi / (numLines/2))),
+                       int(centerSmall[1] - radiusLarge * np.sin(x * np.pi / (numLines/2))))
+recordLine[x + 1] = vyLine(int(centerSmall[0] + radiusSmall * np.cos((x+1) * np.pi / (numLines/2))),
+                       int(centerSmall[1] - radiusSmall * np.sin((x+1) * np.pi / (numLines/2))),
+                       int(centerSmall[0] + radiusLarge * np.cos((x+1) * np.pi / (numLines/2))),
+                       int(centerSmall[1] - radiusLarge * np.sin((x+1) * np.pi / (numLines/2))))
+cv.line(black,
+        (recordLine[x].p1x, recordLine[x].p1y),
+        (recordLine[x].p2x, recordLine[x].p2y),
+        (255, 255, 255), 50)
+cv.line(black,
+        (recordLine[x + 1].p1x, recordLine[x + 1].p1y),
+        (recordLine[x + 1].p2x, recordLine[x + 1].p2y),
+        (255, 255, 255), 50)
+thresh_adapt = cv.adaptiveThreshold(black, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
+im2, contours, hierarchy = cv.findContours(black, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+cv.drawContours(black2, contours, 1, (255,255,255), 50)
+plt.imshow(black2), plt.show()
+print(cv.contourArea(contours[1]))
 
-#Taken from 0 degrees counter clockwise
-lineOne = vyLine(centerSmall[0] + radiusSmall, centerSmall[1], centerSmall[0] + radiusLarge, centerSmall[1])
+# Find smallest roi contour (probably is a more elegant way to do this)
+print(hierarchy)
+print(type(contours))
+print(len(contours))
 
-
-cv.line(bw, (lineOne.p1x, lineOne.p1y), (lineOne.p2x, lineOne.p2y),
-        (255, 0, 255), 50)
-
-plt.imshow(bw, cmap=None), plt.show()
-
-
-
+vinylROI[x] = max(contours, key=cv.contourArea)
+black2 = np.zeros(bw.shape, np.uint8)
+cv.drawContours(black2, vinylROI[x], 0, (255,255,225), 50)
+plt.imshow(black2), plt.show()
+# #Find largest contour
+# largestArea = 0
+# for i in range(0, contours.size()):
+#     a = cv.contourArea(contours[i])
+#     if a > largestArea:
+#         largestArea = a
+#         largest_contour_index = i
+#         bounding_rect = cv.boundingRect(contours[i])
+# print("Found largest contour")
 
 
 
