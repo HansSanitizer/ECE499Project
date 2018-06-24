@@ -49,14 +49,14 @@ radiusSmall = 10000 - 6790
 #plt.imshow(black, cmap='gray'), plt.show()
 print("Record Center(x, y) is: ", centerSmall)
 black2 = np.zeros(bw.shape, np.uint8)
-circOut = cv.circle(black2, centerSmall, (radiusSmall + 3200), (255, 255, 255), -1)
-circIn = cv.circle(black2, centerSmall, (radiusSmall + 3180), (0, 0, 0), -1)
+circOut = cv.circle(black2, centerSmall, (radiusSmall + 4365), (255, 255, 255), -1)
+circIn = cv.circle(black2, centerSmall, (radiusSmall + 4300), (0, 0, 0), -1)
 fin = cv.bitwise_and(bw, black2)
 plt.imshow(fin), plt.show()
 
 # Apply Threshold and detect contours
 thresh_adapt = cv.adaptiveThreshold(fin, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
-im2, contours, hierarchy = cv.findContours(thresh_adapt, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+im2, contours, hierarchy = cv.findContours(thresh_adapt, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 print("Detected number of contours:")
 print(len(contours))
 
@@ -89,7 +89,7 @@ plt.imshow(fin), plt.show()
 x = centerSmall[0] + contours[0][0, 0, 0]
 y = centerSmall[1] + contours[0][0, 0, 1]
 rho = np.sqrt(x**2 + y**2)
-theta = np.arctan(y/x)
+theta = np.arctan2(y, x)
 
 contoursThetaRho = np.array([theta, rho])
 print("Printing Contours XY:")
