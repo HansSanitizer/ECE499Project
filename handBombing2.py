@@ -49,17 +49,13 @@ radiusSmall = 10000 - 6790
 #plt.imshow(black, cmap='gray'), plt.show()
 print("Record Center(x, y) is: ", centerSmall)
 black2 = np.zeros(bw.shape, np.uint8)
-circOut = cv.circle(black2, centerSmall, (radiusSmall + 2300), (255, 255, 255), -1)
-circIn = cv.circle(black2, centerSmall, (radiusSmall + 2200), (0, 0, 0), -1)
+circOut = cv.circle(black2, centerSmall, (radiusSmall + 4365), (255, 255, 255), -1)
+circIn = cv.circle(black2, centerSmall, (radiusSmall + 4300), (0, 0, 0), -1)
 fin = cv.bitwise_and(bw, black2)
 plt.imshow(fin), plt.show()
 
-
-
-
 # Apply Threshold and detect contours
 thresh_adapt = cv.adaptiveThreshold(fin, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
-plt.imshow(thresh_adapt), plt.show()
 im2, contours, hierarchy = cv.findContours(thresh_adapt, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 print("Detected number of contours:")
 print(len(contours))
@@ -94,31 +90,24 @@ x = centerSmall[0] + contours[0][0, 0, 0]
 y = centerSmall[1] + contours[0][0, 0, 1]
 rho = np.sqrt(x**2 + y**2)
 theta = np.arctan2(y, x)
-contoursThetaRho = np.array([theta, rho])
-contoursXY = np.array([x, y])
 
+contoursThetaRho = np.array([theta, rho])
 print("Printing Contours XY:")
 print(contoursThetaRho)
 for i in range(1, len(contours)):
     for j in range(0, len(contours[i])):
-        x = contours[i][j, 0, 0] - centerSmall[0]
-        y = contours[i][j, 0, 1] - centerSmall[1]
+        x = centerSmall[0] + contours[i][j, 0, 0]
+        y = centerSmall[1] + contours[i][j, 0, 1]
         rho = np.sqrt(x**2 + y**2)
         theta = (np.arctan2(y, x))
-        if theta < 0:
-            theta = 2*np.pi + theta
-        # keep adding new rows
-        # get rho theta conversion data set
         b = np.array([theta, rho])
+        # keep adding new rows
         contoursThetaRho = np.column_stack((contoursThetaRho.T, b)).T
-        # get xy data set while we are here
-        b = np.array([x, y])
-        contoursXY = np.column_stack((contoursXY.T, b)).T
-print("Contour Theta Rho Data List")
+
+print("Contour XY data list")
 print(contoursThetaRho)
 plt.plot(contoursThetaRho), plt.show()
-np.savetxt("rhothetadata.csv", contoursThetaRho, delimiter=",")
-np.savetxt("xydata.csv", contoursXY, delimiter=",")
+
 
 # Try canny edge detection as a method instead
 # thresh_adapt = cv.adaptiveThreshold(bw, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 45, 0)
