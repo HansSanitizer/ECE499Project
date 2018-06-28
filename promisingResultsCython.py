@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import cv2 as cv
 print(cv.__version__)
 import numpy as np
-
+import rhoTheta
 bw = cv.imread('Images/tbcfc2.jpg', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
 
@@ -14,10 +14,14 @@ print("The original image height is ", height)
 print("The original image width is ", width)
 black = np.zeros(bw.shape, np.uint8)
 retval, dst = cv.threshold(bw, 45, 255, cv.THRESH_BINARY)
+# plt.figure()
+# plt.imshow(bw), plt.show()
 # plt.imshow(dst), plt.show()
 
+#tbcfc2 center
 centerSmall = (7330, 5832)
-#centerSmall = (8765, 6782)
+# You made me love you 2 center
+#centerSmall = (6782, 8765)
 radiusSmall = 2100
 
 print("Record Center(x, y) is: ", centerSmall)
@@ -52,33 +56,34 @@ while not done:
 # where rows and column index's are positions
 indices = np.where(skel > [0])
 
-x = indices[1][0] - centerSmall[0]
-y = indices[0][0] + centerSmall[1]
-contoursXY = np.array([x, y])
-rho = np.sqrt(x**2 + y**2)
-theta = np.arctan2(y, x)
-if theta < 0:
-    theta = theta + 2*np.pi
-print(len(indices[:]))
-contoursThetaRho = np.array([theta, rho])
-print("Printing Theta Rho:")
-print(contoursThetaRho)
-for i in range(1, len(indices[0])):
-    x = indices[1][i] - centerSmall[0]
-    y = centerSmall[1] - indices[0][i]
-    rho = np.sqrt(x**2 + y**2)
-    theta = (np.arctan2(y, x))
-    if theta < 0:
-        theta = theta + 2*np.pi
-    b = np.array([theta, rho])
-    # keep adding new rows
-    contoursThetaRho = np.column_stack((contoursThetaRho.T, b)).T
-    b = np.array([x, y])
-    contoursXY = np.column_stack((contoursXY.T, b)).T
-# sort our theta data, don't ask me to explain what this is doing
-print("sorting")
-contoursThetaRhoSorted = np.lexsort((contoursThetaRho[:, 1], contoursThetaRho[:, 0]))
-contoursThetaRhoSorted = contoursThetaRho[contoursThetaRhoSorted]
+# x = indices[1][0] - centerSmall[0]
+# y = indices[0][0] + centerSmall[1]
+# contoursXY = np.array([x, y])
+# rho = np.sqrt(x**2 + y**2)
+# theta = np.arctan2(y, x)
+# if theta < 0:
+#     theta = theta + 2*np.pi
+# print(len(indices[:]))
+# contoursThetaRho = np.array([theta, rho])
+# print("Printing Theta Rho:")
+# print(contoursThetaRho)
+# for i in range(1, len(indices[0])):
+#     x = indices[1][i] - centerSmall[0]
+#     y = centerSmall[1] - indices[0][i]
+#     rho = np.sqrt(x**2 + y**2)
+#     theta = (np.arctan2(y, x))
+#     if theta < 0:
+#         theta = theta + 2*np.pi
+#     b = np.array([theta, rho])
+#     # keep adding new rows
+#     contoursThetaRho = np.column_stack((contoursThetaRho.T, b)).T
+#     b = np.array([x, y])
+#     contoursXY = np.column_stack((contoursXY.T, b)).T
+# # sort our theta data, don't ask me to explain what this is doing
+# print("sorting")
+# contoursThetaRhoSorted = np.lexsort((contoursThetaRho[:, 1], contoursThetaRho[:, 0]))
+# contoursThetaRhoSorted = contoursThetaRho[contoursThetaRhoSorted]
+contoursXY, contoursThetaRho = rhoTheta.rhoTheta(indices, centerSmall)
 print(contoursThetaRho)
 plt.figure()
 plt.scatter([contoursThetaRho[:,0]], [contoursThetaRho[:,1]], s=0.2), plt.show()
