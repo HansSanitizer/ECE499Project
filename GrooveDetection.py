@@ -66,6 +66,9 @@ def image_to_skeleton(image):
     return indices
 
 
+""" I want this to return a list of tuples (rho, theta), but I don't care
+    about sorting yet.
+"""
 def skeleton_to_points(indices, center):
 
     x = indices[1][0] - center[0]
@@ -81,7 +84,7 @@ def skeleton_to_points(indices, center):
 
     for i in range(1, len(indices[0])):
         x = indices[1][i] - center[0]
-        y = center[1] - indices[0][0]
+        y = center[1] - indices[0][i]
         rho = np.sqrt(x ** 2 + y ** 2)
         theta = (np.arctan2(y, x))
         if theta < 0:
@@ -151,7 +154,6 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             bin_edge_min = bin_edges[histogram_bin]
             bin_edge_max = bin_edges[histogram_bin + 1]
             index_min_rho = points.index((bin_edge_min,))
-
             """ Handling special case of final bin being [ ] (opposed to [ ) for
                 other bins.
             """
@@ -159,12 +161,14 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
                 index_max_rho = points.index((bin_edge_max,))-1
             else:
                 index_max_rho = points.index((bin_edge_max,))
+
             points_temp.append(points[index_min_rho:index_max_rho])
 
         """ If the current bin is invalid, and the last bin was valid, then
             we've collected the points in a groove.
             
-            To do: handle linking.
+            To do: handle linking. (if necessary, the order in the list is
+            probably a sufficient way to deal with linking)
         """
         if this_bin_valid is False and last_bin_valid is True:
             grooves.append(Groove(points_temp, None, None))
