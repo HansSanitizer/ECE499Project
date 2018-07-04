@@ -37,22 +37,3 @@ class AudioPlayer:
         self.stream.stop_stream()
 
         self.stream.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

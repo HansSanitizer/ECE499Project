@@ -3,7 +3,7 @@
     Warning: there is a very real danger of screaming feedback, so
              lower speaker volume before using!
 """
-import AudioPlayer
+from AudioPlayer import AudioPlayer
 
 player = AudioPlayer.AudioPlayer()
 
