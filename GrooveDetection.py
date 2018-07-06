@@ -4,22 +4,31 @@
     The order of the functions in this file is the order of
     expected use.
 
-    These functions implement second (third? maybe formalize this first...)
-    stage processing. That is, groove data is produced from image data and
+    Groove data is produced from image data and
     a known center point.
 """
 import cv2 as cv
 import numpy as np
+import operator
 
+# To do: define a point type.
 
 class Groove:
 
     def __init__(self, angular_data=list(), next_groove=None, last_groove=None):
 
         self.angular_data = list()
-        self.angular_data.append(angular_data)
+        self.angular_data.extend(angular_data)
         self.next_groove = next_groove
         self.last_groove = last_groove
+
+    def get_theta_data(self):
+
+        return [point[1] for point in self.angular_data]
+
+    def get_rho_data(self):
+
+        return [point[0] for point in self.angular_data]
 
 
 def load_grey_scale(path):
@@ -66,8 +75,10 @@ def image_to_skeleton(image):
     return indices
 
 
-""" I want this to return a list of tuples (rho, theta), but I don't care
-    about sorting yet.
+""" I want this to return a list of tuples (rho, theta), and I don't care about sorting.
+
+    Not doing the sort here really sped things up. (That needs to be implemented here. It's in the
+    test script)
 """
 def skeleton_to_points(indices, center):
 
@@ -95,19 +106,14 @@ def skeleton_to_points(indices, center):
         b = np.array([x, y])
         contours_points = np.column_stack((contours_points.T, b)).T
 
-    # I'm not convinced that sorting is necessary yet.
-    # Now I am. But I need it sorted by radius.
-    # Why lex sort? Isn't this numeric data?
     contours_theta_rho_sorted = np.lexsort((contours_theta_rho[:, 1], contours_theta_rho[:, 0]))
     contours_theta_rho_sorted = contours_theta_rho[contours_theta_rho_sorted]
     return contours_theta_rho_sorted
 
 
-def points_histogram(rho):
+def points_histogram(rhos):
 
-    """ I'm not sure what the best method of bin sizing is yet. """
-
-    histogram, bin_edges = np.histogram(rho, bins="fd")
+    histogram, bin_edges = np.histogram(rhos, bins="fd")
 
     return histogram, bin_edges
 
@@ -134,11 +140,15 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
         I'm assuming that points is a list of tuples (rho, theta) sorted from max to min rho.
         But I'm not going to hack up skeleton_to_points yet.
 
+        This might be improved by tacking the bin that proceed the first valid on. There's a kind of cut-off
+        going on right now.
     """
 
     grooves = list()
     points_temp = list()
     last_bin_valid = False
+
+    # it might be worth checking for duplicates (not sure it's possible, but a check might be worth it)
 
     """ This for loop is currently running in the wrong direction.
         This was done on purpose. (I didn't want to think about the
@@ -153,24 +163,33 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             this_bin_valid = True
             bin_edge_min = bin_edges[histogram_bin]
             bin_edge_max = bin_edges[histogram_bin + 1]
-            index_min_rho = points.index((bin_edge_min,))
+
             """ Handling special case of final bin being [ ] (opposed to [ ) for
                 other bins.
+                
+                This will go through the entire list. Might be worth finding a better way.
             """
             if histogram_bin != len(histogram):
-                index_max_rho = points.index((bin_edge_max,))-1
+                [points_temp.append(point) for point in points if (bin_edge_min <= point[0] < bin_edge_max)]
             else:
-                index_max_rho = points.index((bin_edge_max,))
-
-            points_temp.append(points[index_min_rho:index_max_rho])
+                [points_temp.append(point) for point in points if (bin_edge_min <= point[0] <= bin_edge_max)]
 
         """ If the current bin is invalid, and the last bin was valid, then
             we've collected the points in a groove.
-            
+
             To do: handle linking. (if necessary, the order in the list is
-            probably a sufficient way to deal with linking)
+            probably a sufficient way to deal with linking). Handling this here
+            might deal with that "I did it backwards" thing.
         """
         if this_bin_valid is False and last_bin_valid is True:
+
+            # I'm not convinced that rejecting outliers is useful.
+            points_temp = points_reject_rho_outliers(points_temp, m=3)
+            points_temp = points_reject_theta_outliers(points_temp)
+
+            # Sort by radius in order of increasing angle.
+            points_temp.sort(key=operator.itemgetter(1))
+
             grooves.append(Groove(points_temp, None, None))
             points_temp = list()
 
@@ -178,3 +197,20 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
 
     return grooves
 
+
+def points_reject_rho_outliers(data, m=2):
+    rhos = [point[0] for point in data]
+    median = np.median(rhos)
+    d = [np.abs(rho - median) for rho in rhos]
+    median_d = np.median(d)
+    s = d/median_d if median_d else 0
+    return [point for i, point in enumerate(data) if s[i] < m]
+
+
+def points_reject_theta_outliers(data, m=2):
+    thetas = [point[1] for point in data]
+    median = np.median(thetas)
+    d = [np.abs(theta - median) for theta in thetas]
+    median_d = np.median(d)
+    s = d/median_d if median_d else 0
+    return [point for i, point in enumerate(data) if s[i] < m]
