@@ -1,4 +1,5 @@
 import GrooveDetection
+import numpy as np
 
 
 class IrregularAudio:
@@ -15,11 +16,11 @@ class IrregularAudio:
 
         self.data.extend(other)
 
-    def get_amplitudes(self):
+    def get_amplitude_axis(self):
 
         return [point[0] for point in self.data]
 
-    def get_times(self):
+    def get_time_axis(self):
 
         return [point[1] for point in self.data]
 
@@ -28,9 +29,8 @@ class Audio:
 
     def __init__(self, irregular_audio=IrregularAudio):
 
-        normalized_audio = normalize_audio(irregular_audio.data)
         # To do: implement irregular sampling.
-        self.data = normalized_audio
+        self.data = normalize_audio(irregular_audio.data)
 
     def __len__(self):
 
@@ -40,11 +40,11 @@ class Audio:
 
         self.data.extend(other)
 
-    def get_amplitudes(self):
+    def get_amplitude_axis(self):
 
         return [sample[0] for sample in self.data]
 
-    def get_times(self):
+    def get_time_axis(self):
 
         return [sample[1] for sample in self.data]
 
@@ -57,8 +57,8 @@ def groove_to_irregular_audio(groove=GrooveDetection.Groove):
     theta = 0
     dif_rhos = list()
     dif_theta = list()
-    rhos = groove.get_rho_data()
-    thetas = groove.get_theta_data()
+    rhos = groove.get_rho_axis()
+    thetas = groove.get_theta_axis()
 
     for i in range(len(rhos)-1):
 
@@ -93,11 +93,22 @@ def rho_to_amplitude(rho, time, slope, alpha=1):
 
 
 def normalize_audio(audio_data):
+    """
+    Normalizes audio. (min = 0 and max = 1)
+
+    :param audio_data:
+    :return:
+    """
 
     amplitudes = [sample[0] for sample in audio_data]
     times = [sample[1] for sample in audio_data]
-    max_amplitude = max(amplitudes)
-    normalized_amplitudes = [sample/max_amplitude for sample in amplitudes]
+
+    min_amplitude = min(amplitudes)
+    shifted_amplitudes = [sample + np.abs(min_amplitude) for sample in amplitudes]
+
+    max_amplitude = max(shifted_amplitudes)
+    normalized_amplitudes = [sample/max_amplitude for sample in shifted_amplitudes]
+
     normalized_audio = list()
 
     for i in range(len(audio_data)):
