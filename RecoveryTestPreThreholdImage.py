@@ -5,7 +5,7 @@ import numpy as np
 import GrooveDetection
 import DataConversion
 
-bw = cv.imread('tbcfc2ThreshTest.tif', cv.IMREAD_GRAYSCALE)
+bw = cv.imread('Images/tbcfc2ThreshTest.tif', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
 
 height, width = bw.shape
