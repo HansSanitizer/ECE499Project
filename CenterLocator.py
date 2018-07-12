@@ -1,19 +1,12 @@
 from matplotlib import pyplot as plt
 import cv2 as cv
 import numpy as np
-
-
-class Circle:
-
-    def __init__(self, center=(1,1), radius=1):
-        self.center = center
-        self.radius = radius
-        self.area = np.pi*radius**2
+import BasicGeometry as bg
 
 
 print("Locating center of the record...")
 
-bw = cv.imread('ymmly1.jpg', cv.IMREAD_GRAYSCALE)       # Note what image this is!
+bw = cv.imread('ymmly1.jpg', cv.IMREAD_GRAYSCALE)
 
 # Enhance edges
 # parameters are all magic numbers
@@ -42,7 +35,7 @@ contours_circle_candidates = list()
 min_area = 270      # This might be too low for practical reasons.
 max_area = 700
 for contour in contours:
-    approx = cv.approxPolyDP(contour,0.01*cv.arcLength(contour, True), True)
+    approx = cv.approxPolyDP(contour, 0.01*cv.arcLength(contour, True), True)
     area = cv.contourArea(contour)
     if (len(approx) > 8) & (area > min_area) & (area < max_area):
         contours_circle_candidates.append(contour)
@@ -53,14 +46,14 @@ print("Enclosing candidates with circles...")
 circles = list()
 for contour in contours_circle_candidates:
     (x, y), rho = cv.minEnclosingCircle(contour)
-    circles.append(Circle((int(x), int(y)), rho))
+    circles.append(bg.Circle((int(x), int(y)), rho))
     # print("Radius: " + str(rho) + "  Center: " + str((x, y)))
 
 # Find the best candidate for inner radius
 print("Finding best candidate for inner radius...")
-best_circle = Circle()
+best_circle = bg.Circle()
 best_dif = 1
-expected_area = 176460            # 1.658 cm (I guess) in pixels (I guess?)
+expected_area = 176460            # 1.658 cm^2 (I guess) in pixels (I guess?). replace this with a real number.
 area_tolerance = 0.05             # tolerance of five percent
 for circle in circles:
     dif = np.abs(expected_area-circle.area)/expected_area
@@ -73,9 +66,9 @@ print("Best candidate for inner radius is " + str(best_circle.radius) + " " + st
 print("Showing results...")
 font = cv.FONT_HERSHEY_SIMPLEX
 cv.drawContours(bw, contours_circle_candidates, -1, (255, 0, 0), 2)
-for circle in circles:
-    cv.circle(bw, circle.center, int(circle.radius), (0, 0, 255), -1)
-    cv.putText(bw, str(circle.radius), circle.center, font, 4, (255, 255, 255), 2, cv.LINE_AA)
+# for circle in circles:
+#     cv.circle(bw, circle.center, int(circle.radius), (0, 0, 255), -1)
+#     cv.putText(bw, str(circle.radius), circle.center, font, 4, (255, 255, 255), 2, cv.LINE_AA)
 plt.imshow(bw)
 plt.show()
 print("The center is located at " + str(best_circle.center))
