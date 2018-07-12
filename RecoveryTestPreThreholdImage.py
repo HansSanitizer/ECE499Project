@@ -3,8 +3,9 @@ import cv2 as cv
 print(cv.__version__)
 import numpy as np
 import GrooveDetection
+import DataConversion
 
-bw = cv.imread('Images/tbcfc2ThreshTest.tif', cv.IMREAD_GRAYSCALE)
+bw = cv.imread('tbcfc2ThreshTest.tif', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
 
 height, width = bw.shape
@@ -65,5 +66,9 @@ h, bin_edges = GrooveDetection.points_histogram([point[0] for point in points_tr
 grooves = GrooveDetection.points_to_grooves(h, bin_edges, 1000, points_truncated)
 
 for groove in grooves:
-    plt.scatter(groove.get_theta_data(), groove.get_rho_data(), s=0.2)
+    plt.scatter(groove.get_theta_axis(), groove.get_rho_axis(), s=0.2)
+    plt.show()
+    irregular_audio = DataConversion.IrregularAudio(groove)
+    audio = DataConversion.Audio(irregular_audio)
+    plt.scatter(audio.get_time_axis(), audio.get_amplitude_axis(), s=0.2)
     plt.show()
