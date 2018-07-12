@@ -11,7 +11,6 @@ import cv2 as cv
 import numpy as np
 import operator
 
-# To do: define a point type.
 
 class Groove:
 
@@ -19,14 +18,16 @@ class Groove:
 
         self.angular_data = list()
         self.angular_data.extend(angular_data)
+        # best_fit = np.polyfit(self.get_theta_data(), self.get_rho_data(), 1)
+        # self.slope = best_fit[0]
         self.next_groove = next_groove
         self.last_groove = last_groove
 
-    def get_theta_data(self):
+    def get_theta_axis(self):
 
         return [point[1] for point in self.angular_data]
 
-    def get_rho_data(self):
+    def get_rho_axis(self):
 
         return [point[0] for point in self.angular_data]
 
