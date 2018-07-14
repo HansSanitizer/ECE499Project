@@ -18,8 +18,8 @@ class Groove:
 
         self.angular_data = list()
         self.angular_data.extend(angular_data)
-        # best_fit = np.polyfit(self.get_theta_data(), self.get_rho_data(), 1)
-        # self.slope = best_fit[0]
+        best_fit = np.polyfit(self.get_theta_axis(), self.get_rho_axis(), 1)
+        self.slope = best_fit[0]
         self.next_groove = next_groove
         self.last_groove = last_groove
 
@@ -191,6 +191,8 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             # Sort by radius in order of increasing angle.
             points_temp.sort(key=operator.itemgetter(1))
 
+            points_temp = normalize_groove_data(points_temp)
+
             grooves.append(Groove(points_temp, None, None))
             points_temp = list()
 
@@ -215,3 +217,18 @@ def points_reject_theta_outliers(data, m=2):
     median_d = np.median(d)
     s = d/median_d if median_d else 0
     return [point for i, point in enumerate(data) if s[i] < m]
+
+def normalize_groove_data(groove_data):
+
+    rhos = [sample[0] for sample in groove_data]
+    thetas = [sample[1] for sample in groove_data]
+
+    max_rho= max(rhos)
+    normalized_rhos = [sample / max_rho for sample in rhos]
+
+    normalized_groove_data = list()
+
+    for i in range(len(groove_data)):
+        normalized_groove_data.append((normalized_rhos[i], thetas[i]))
+
+    return normalized_groove_data

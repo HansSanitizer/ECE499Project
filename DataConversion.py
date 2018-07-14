@@ -51,20 +51,26 @@ class Audio:
 
 def groove_to_irregular_audio(groove=GrooveDetection.Groove):
 
-    rho_diffs = calc_diffs(groove.get_rho_axis())
-    theta_diffs = calc_diffs(groove.get_theta_axis())
+    times = [theta_to_time(theta, 1) for theta in groove.get_theta_axis()]
+    amplitudes = [rho_to_amplitude(rho, times[i], groove.slope) for i, rho in enumerate(groove.get_rho_axis())]
+    irregular_audio = [(amplitudes[i], times[i]) for i in range(len(groove.angular_data))]
 
-    irregular_audio = list()
-    amplitude = 0
-    time = 0
-    theta = 0
-
-    for i in range(len(groove.angular_data)-1):
-
-        amplitude = amplitude + rho_diffs[i]
-        theta = theta + theta_diffs[i]
-        time = time + theta_to_time(theta, 1)
-        irregular_audio.append((amplitude, time))
+    # This method may be in valid.
+    # # are these ordered correctly?
+    # rho_diffs = calc_diffs(groove.get_rho_axis())
+    # theta_diffs = calc_diffs(groove.get_theta_axis())
+    #
+    # irregular_audio = list()
+    # amplitude = 0
+    # time = 0
+    # theta = 0
+    #
+    # for i in range(len(groove.angular_data)-1):
+    #
+    #     amplitude = amplitude + rho_diffs[i]
+    #     theta = theta + theta_diffs[i]
+    #     time = time + theta_to_time(theta, 1)
+    #     irregular_audio.append((amplitude, time))
 
     return irregular_audio
 
@@ -84,15 +90,13 @@ def theta_to_time(theta, rotation):
     return rotation*theta/4680
 
 
-# To do: deprecate?
 def rho_to_amplitude(rho, time, slope, alpha=1):
-
-    """ This function requires a bias, since we start at the max and end at the min.
-    """
 
     return (rho + slope*time)/alpha
 
 
+# might not be necessary, or needs to be handled slightly differently.
+# PCM audio is signed.
 def normalize_audio(audio_data):
     """
     Normalizes audio. (min = 0 and max = 1)
@@ -117,6 +121,17 @@ def normalize_audio(audio_data):
 
     return normalized_audio
 
+def normalize_groove_data(groove_data):
 
+    rhos = [sample[0] for sample in groove_data]
+    thetas = [sample[1] for sample in groove_data]
 
+    max_rho= max(rhos)
+    normalized_rhos = [sample / max_rho for sample in rhos]
 
+    normalized_groove_data = list()
+
+    for i in range(len(groove_data)):
+        normalized_groove_data.append((normalized_rhos[i], thetas[i]))
+
+    return normalized_groove_data
