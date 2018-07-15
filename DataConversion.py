@@ -93,7 +93,8 @@ def groove_to_irregular_audio(rotation, groove=GrooveDetection.Groove):
 # To do: verify, specifically is the rotation parameter necessary?
 def theta_to_time(theta, rotation):
 
-    return rotation*theta/4680
+    # return rotation*theta/4680
+    return rotation*theta/8.293804605
 
 
 def rho_to_amplitude(rho, time, slope, alpha=1):
@@ -106,7 +107,7 @@ def rho_to_amplitude(rho, time, slope, alpha=1):
 # Also, this function will barely work if at all until it's fully implemented.
 def audio_to_wave(audio, name='recovered_audio'):
 
-    amplitudes = audio.data
+    amplitudes = audio.get_amplitude_axis()
     audio_packed = pack_audio(amplitudes)
     audio_packed_str = packed_to_string(audio_packed)
     f = wave.open(name + '.wav', 'w')
@@ -167,6 +168,7 @@ def voroni_interp(sample_rate, audio=IrregularAudio()):
 
 
 # This will sample the step functions created by voroni_interp.
+# Think I just invalidated this. theta_to_time was incorrect.
 def sample_audio(sample_rate=48000, audio_data=None):
 
     if audio_data is None:
