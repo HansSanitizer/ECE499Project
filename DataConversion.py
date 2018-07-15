@@ -1,20 +1,27 @@
 import GrooveDetection
-import numpy as np
 
 
 class IrregularAudio:
 
-    def __init__(self, groove=GrooveDetection.Groove):
+    def __init__(self, groove=None, rotation=1):
 
-        self.data = groove_to_irregular_audio(groove)
+        if groove is None:
+            self.data = list()
+        elif isinstance(groove, GrooveDetection.Groove):
+            self.data = groove_to_irregular_audio(rotation, groove)
+        else:
+            raise TypeError
 
     def __len__(self):
 
         return len(self.data)
 
-    def __add__(self, other):
+    def extend(self, other):
 
-        self.data.extend(other)
+        if isinstance(other, IrregularAudio):
+            self.data.extend(other.data)
+        else:
+            raise TypeError
 
     def get_amplitude_axis(self):
 
@@ -23,14 +30,20 @@ class IrregularAudio:
     def get_time_axis(self):
 
         return [sample[1] for sample in self.data]
+
 
 # To do: finish this class
 class Audio:
 
-    def __init__(self, irregular_audio=IrregularAudio):
+    def __init__(self, irregular_audio=None):
 
-        # To do: implement irregular sampling.
-        self.data = irregular_audio.data
+        if irregular_audio is None:
+            self.data = list()
+        elif irregular_audio is IrregularAudio:
+            # To do: implement irregular sampling.
+            self.data = IrregularAudio
+        else:
+            raise TypeError
 
     def __len__(self):
 
@@ -38,7 +51,10 @@ class Audio:
 
     def __add__(self, other):
 
-        self.data.extend(other)
+        if other is Audio:
+            self.data.extend(other.data)
+        else:
+            raise TypeError
 
     def get_amplitude_axis(self):
 
@@ -49,9 +65,9 @@ class Audio:
         return [sample[1] for sample in self.data]
 
 
-def groove_to_irregular_audio(groove=GrooveDetection.Groove):
+def groove_to_irregular_audio(rotation, groove=GrooveDetection.Groove):
 
-    times = [theta_to_time(theta, 1) for theta in groove.get_theta_axis()]
+    times = [theta_to_time(theta, rotation) for theta in groove.get_theta_axis()]
     amplitudes = [rho_to_amplitude(rho, times[i], groove.slope) for i, rho in enumerate(groove.get_rho_axis())]
     irregular_audio = [(amplitudes[i], times[i]) for i in range(len(groove.angular_data))]
 
@@ -75,17 +91,7 @@ def groove_to_irregular_audio(groove=GrooveDetection.Groove):
     return irregular_audio
 
 
-def calc_diffs(data):
-
-    diffs = list()
-
-    for i in range(len(data)-1):
-        diffs.append(data[i+1] - data[i])
-
-    return diffs
-
-
-# To do: verify.
+# To do: verify, specifically is the rotation parameter necessary?
 def theta_to_time(theta, rotation):
 
     return rotation*theta/4680
