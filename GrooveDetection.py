@@ -224,8 +224,11 @@ def normalize_groove_data(groove_data):
     rhos = [sample[0] for sample in groove_data]
     thetas = [sample[1] for sample in groove_data]
 
-    max_rho = max(rhos)
-    normalized_rhos = [sample / max_rho for sample in rhos]
+    average_rho = np.average(rhos)
+    shifted_rhos = [rho - average_rho for rho in rhos]
+
+    max_rho = max(shifted_rhos)
+    normalized_rhos = [rho / max_rho for rho in shifted_rhos]
 
     normalized_groove_data = [(normalized_rhos[i], thetas[i]) for i in range(len(groove_data))]
 
