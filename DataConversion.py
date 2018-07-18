@@ -38,6 +38,7 @@ class IrregularAudio:
 
         return [sample[1] for sample in self.data]
 
+    # this implementation is hacky
     def get_max_gap(self):
 
         gaps = list()
@@ -57,12 +58,12 @@ class IrregularAudio:
 # To do: finish this class
 class Audio:
 
-    def __init__(self, sample_rate, irregular_audio=None):
+    def __init__(self, sample_rate=48000, irregular_audio=None):
 
         if irregular_audio is None:
             self.data = list()
         elif isinstance(irregular_audio, IrregularAudio):
-            audio_interp = voroni_interp(48000, irregular_audio)
+            audio_interp = voroni_interp(sample_rate, irregular_audio)
             audio_filtered = filter_audio(audio_interp)
             self.data = audio_filtered
         else:
@@ -102,13 +103,9 @@ def rho_to_amplitude(rho, time, slope, alpha=1):
     return (rho + slope*time)/alpha
 
 
-# Temporarily takes an IrregularAudio object as input.
-# This will be changed in future to take an Audio object.
-# Also, this function will barely work if at all until it's fully implemented.
 def audio_to_wave(audio, name='recovered_audio'):
 
-    amplitudes = audio.get_amplitude_axis()
-    audio_packed = pack_audio(amplitudes)
+    audio_packed = pack_audio(audio)
     audio_packed_str = packed_to_string(audio_packed)
     f = wave.open(name + '.wav', 'w')
     f.setnchannels(1)
@@ -135,6 +132,7 @@ def packed_to_string(packed_audio):
     return audio_packed_str
 
 
+# <under scrutiny>
 # This is producing a set of step-functions.
 def voroni_interp(sample_rate, audio=IrregularAudio()):
 
@@ -169,7 +167,7 @@ def voroni_interp(sample_rate, audio=IrregularAudio()):
 
 # This will sample the step functions created by voroni_interp.
 # Think I just invalidated this. theta_to_time was incorrect.
-def sample_audio(sample_rate=48000, audio_data=None):
+def sample_voroni(sample_rate=48000, audio_data=None):
 
     if audio_data is None:
         raise TypeError(' requires audio data.')
@@ -206,10 +204,18 @@ def sample_audio(sample_rate=48000, audio_data=None):
     return samples
 
 
-def filter_audio(data, order=3, wn=0.5):
+def filter_audio(data):
 
-    sampled_audio = sample_audio(48000, data)
+    sampled_audio = sample_voroni(48000, data)
+    filtered_audio = filter_lp(sampled_audio)
+
+    return filtered_audio
+# </under scrutiny>
+
+
+def filter_lp(data, order=3, wn=0.5):
+
     b, a = signal.butter(order, wn)
-    filtered_audio = signal.lfilter(b, a, sampled_audio)
+    filtered_audio = signal.lfilter(b, a, data)
 
     return list(filtered_audio)
