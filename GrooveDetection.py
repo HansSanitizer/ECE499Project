@@ -191,7 +191,8 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             points_temp.sort(key=operator.itemgetter(1))
 
             # This may be too local.
-            points_temp = normalize_groove_data(points_temp)
+            # Disabled temporarily
+            # points_temp = normalize_groove_data(points_temp)
 
             grooves.append(Groove(points_temp, None, None))
             points_temp = list()
