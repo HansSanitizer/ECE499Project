@@ -1,12 +1,11 @@
-import GrooveDetection
+import Detection
 import wave
 import struct
 import scipy.signal as signal
 import numpy as np
 
 
-# To do: this class is likely to transform into the Audio class.
-class IrregularAudio:
+class Stylus:
 
     def __init__(self, groove=None, rotation=1):
 
@@ -14,9 +13,9 @@ class IrregularAudio:
 
             self.data = list()
 
-        elif isinstance(groove, GrooveDetection.Groove):
+        elif isinstance(groove, Detection.Groove):
 
-            self.data = groove_to_velocity(rotation, time_axis_unique(groove.angular_data))
+            self.data = angular_to_velocity(rotation, time_axis_unique(groove.angular_data))
 
         else:
             raise TypeError(' must initialize from Groove object.')
@@ -27,12 +26,12 @@ class IrregularAudio:
 
     def append(self, other):
 
-        if isinstance(other, IrregularAudio):
+        if isinstance(other, Stylus):
             self.data.extend(other.data)
         else:
-            raise TypeError(' must append IrregularAudio object.')
+            raise TypeError(' must append Stylus object.')
 
-    def get_amplitude_axis(self):
+    def get_velocity_axis(self):
 
         return [sample[0] for sample in self.data]
 
@@ -40,31 +39,14 @@ class IrregularAudio:
 
         return [sample[1] for sample in self.data]
 
-    # this implementation is hacky
-    def get_max_gap(self):
 
-        gaps = list()
-
-        for i in range(1, len(self.data) - 1):
-            this_data = self.data[i - 1]
-            next_data = self.data[i]
-
-            this_time = this_data[1]
-            next_time = next_data[1]
-
-            gaps.append(next_time - this_time)
-
-        return max(gaps)
-
-
-# To do: finish this class
 class Audio:
 
     def __init__(self, sample_rate=48000, irregular_audio=None):
 
         if irregular_audio is None:
             self.data = list()
-        elif isinstance(irregular_audio, IrregularAudio):
+        elif isinstance(irregular_audio, Stylus):
             audio_interp = voroni_interp(sample_rate, irregular_audio)
             audio_filtered = filter_voroni(audio_interp)
             self.data = audio_filtered
@@ -84,18 +66,19 @@ class Audio:
             raise TypeError(' must append Audio object.')
 
 
-def time_axis_unique(data):
+# To do: this may be unnecessary because of the poly fit method.
+def time_axis_unique(angular_data):
     """
     We have issues with duplicates in the time axis causing div 0 errors down the line.
 
-    :param data: groove.angular_data
+    :param angular_data: groove.angular_data
     :return: data points with a unique time axis-value
     """
 
     seen = set()
     unique = list()
 
-    for x in data:
+    for x in angular_data:
         if x[1] not in seen:
             unique.append(x)
             seen.add(x[1])
@@ -103,22 +86,37 @@ def time_axis_unique(data):
     return unique
 
 
-# assuming that capture is actually working, our problems probably start here.
-def groove_to_velocity(rotation, data):
+def angular_to_velocity(rotation, angular_data):
 
-    return angular_to_velocity([point[0] for point in data], [theta_to_time(point[1], rotation) for point in data])
+    time_data = angular_to_time(angular_data, rotation)
+    return time_to_velocity(time_data)
 
 
 # To do: verify.
-def theta_to_time(theta, rotation):
+def angular_to_time(angular_data, rotation):
+    """
+    Converts theta axis of angular data to time.
+    :param angular_data:
+    :param rotation:
+    :return: time data
+    """
 
-    return rotation*theta/(1.3*2*np.pi)
+    rhos = [point[0] for point in angular_data]
+    thetas = [point[1] for point in angular_data]
+    times = [rotation*theta/(1.3*2*np.pi) for theta in thetas]
+    return [(rhos[i], times[i]) for i in range(len(angular_data))]
 
 
-def angular_to_velocity(rhos, times):
+def time_to_velocity(time_data, sample_rate=48000):
+    """
+    Converts time data to resampled velocity data.
+    :param time_data:
+    :param sample_rate:
+    :return:
+    """
 
-    if len(rhos) != len(times):
-        raise RuntimeError(' inputs must be equal in length.')
+    rhos = [data[0] for data in time_data]
+    times = [data[1] for data in time_data]
 
     velocity = list()
 
@@ -131,7 +129,8 @@ def angular_to_velocity(rhos, times):
         # To do: figure out why you get a poorly conditioned warning.
         poly = np.polyfit([point[0] for point in points], [point[1] for point in points], 4)
         poly_der = np.polyder(poly)
-        # Sample velocity at multiples of sampling period, not the center of the window.
+        # To do: sample velocity at multiples of sampling period, not the center of the window.
+        # resample_poly(poly_der, duration)
         velocity.append(np.polyval(poly_der, times[center]))
 
     return velocity
@@ -150,6 +149,13 @@ def get_chunk(i, rhos, times, width=15):
     points.extend([(rhos[i], times[i]) for i in range(chunk_center + 1, end)])
 
     return points, chunk_center, duration
+
+
+def resample_poly(p, duration, time_bias):
+
+    # To do: implement
+
+    return
 
 
 def normalize_amplitudes(amplitudes):
@@ -188,7 +194,7 @@ def packed_to_string(packed_audio):
 
 # <under scrutiny>
 # This is producing a set of step-functions.
-def voroni_interp(sample_rate, audio=IrregularAudio()):
+def voroni_interp(sample_rate, audio=Stylus()):
 
     data = audio.data
     sampling_period = 1/float(sample_rate)
