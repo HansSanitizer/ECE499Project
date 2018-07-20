@@ -2,8 +2,10 @@ import GrooveDetection
 import wave
 import struct
 import scipy.signal as signal
+import numpy as np
 
 
+# To do: this class is likely to transform into the Audio class.
 class IrregularAudio:
 
     def __init__(self, groove=None, rotation=1):
@@ -14,7 +16,7 @@ class IrregularAudio:
 
         elif isinstance(groove, GrooveDetection.Groove):
 
-            self.data = groove_to_irregular_audio(rotation, groove)
+            self.data = groove_to_velocity(rotation, time_axis_unique(groove.angular_data))
 
         else:
             raise TypeError(' must initialize from Groove object.')
@@ -64,7 +66,7 @@ class Audio:
             self.data = list()
         elif isinstance(irregular_audio, IrregularAudio):
             audio_interp = voroni_interp(sample_rate, irregular_audio)
-            audio_filtered = filter_audio(audio_interp)
+            audio_filtered = filter_voroni(audio_interp)
             self.data = audio_filtered
         else:
             raise TypeError(' must initialize from IrregularAudio object.')
@@ -82,25 +84,77 @@ class Audio:
             raise TypeError(' must append Audio object.')
 
 
-def groove_to_irregular_audio(rotation, groove=GrooveDetection.Groove):
+def time_axis_unique(data):
+    """
+    We have issues with duplicates in the time axis causing div 0 errors down the line.
 
-    times = [theta_to_time(theta, rotation) for theta in groove.get_theta_axis()]
-    amplitudes = [rho_to_amplitude(rho, times[i], groove.slope) for i, rho in enumerate(groove.get_rho_axis())]
-    irregular_audio = [(amplitudes[i], times[i]) for i in range(len(groove.angular_data))]
+    :param data: groove.angular_data
+    :return: data points with a unique time axis-value
+    """
 
-    return irregular_audio
+    seen = set()
+    unique = list()
+
+    for x in data:
+        if x[1] not in seen:
+            unique.append(x)
+            seen.add(x[1])
+
+    return unique
 
 
-# To do: verify, specifically is the rotation parameter necessary?
+# assuming that capture is actually working, our problems probably start here.
+def groove_to_velocity(rotation, data):
+
+    return angular_to_velocity([point[0] for point in data], [theta_to_time(point[1], rotation) for point in data])
+
+
+# To do: verify.
 def theta_to_time(theta, rotation):
 
-    # return rotation*theta/4680
-    return rotation*theta/8.293804605
+    return rotation*theta/(1.3*2*np.pi)
 
 
-def rho_to_amplitude(rho, time, slope, alpha=1):
+def angular_to_velocity(rhos, times):
 
-    return (rho + slope*time)/alpha
+    if len(rhos) != len(times):
+        raise RuntimeError(' inputs must be equal in length.')
+
+    velocity = list()
+
+    window_width = 15
+    n_points = len(rhos)
+    n_chunks = n_points/window_width
+
+    for i in range(1, n_chunks):
+        points, center, duration = get_chunk(i, rhos, times, window_width)
+        # To do: figure out why you get a poorly conditioned warning.
+        poly = np.polyfit([point[0] for point in points], [point[1] for point in points], 4)
+        poly_der = np.polyder(poly)
+        # Sample velocity at multiples of sampling period, not the center of the window.
+        velocity.append(np.polyval(poly_der, times[center]))
+
+    return velocity
+
+
+def get_chunk(i, rhos, times, width=15):
+
+    center = width/2
+    wing_size = center - 1
+    chunk_center = i * center
+    start = chunk_center - wing_size
+    end = chunk_center + wing_size
+    duration = times[end] - times[start]
+    points = [(rhos[i], times[i]) for i in range(start, chunk_center - 1)]
+    points.append((rhos[chunk_center], times[chunk_center]))
+    points.extend([(rhos[i], times[i]) for i in range(chunk_center + 1, end)])
+
+    return points, chunk_center, duration
+
+
+def normalize_amplitudes(amplitudes):
+    max_amplitude = max(np.abs(amplitudes))
+    return [n/max_amplitude for n in amplitudes]
 
 
 def audio_to_wave(audio, name='recovered_audio'):
@@ -204,7 +258,7 @@ def sample_voroni(sample_rate=48000, audio_data=None):
     return samples
 
 
-def filter_audio(data):
+def filter_voroni(data):
 
     sampled_audio = sample_voroni(48000, data)
     filtered_audio = filter_lp(sampled_audio)
