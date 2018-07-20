@@ -55,23 +55,24 @@ def apply_threshold(image):
 
 def image_to_skeleton(image):
 
-    element = cv.getStructuringElement(cv.MORPH_CROSS, (3, 3))
+    element = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3, 3))
     done = False
     size = np.size(image)
     skeleton = np.zeros(image.shape, np.uint8)
 
     while not done:
-        eroded = cv.erode(thresh_adapt_copy, element)
+        eroded = cv.erode(image, element)
         temp = cv.dilate(eroded, element)
-        temp = cv.subtract(thresh_adapt_copy, temp)
+        temp = cv.subtract(image, temp)
         skeleton = cv.bitwise_or(skeleton, temp)
-        thresh_adapt_copy = eroded.copy()
+        image = eroded.copy()
 
-        zeros = size - cv.countNonZero(thresh_adapt_copy)
+        zeros = size - cv.countNonZero(image)
         if zeros == size:
             done = True
 
-    indices = np.were(skeleton > [0])
+    indices = np.where(skeleton > [0])
+
     return indices
 
 
@@ -82,33 +83,27 @@ def image_to_skeleton(image):
 """
 def skeleton_to_points(indices, center):
 
-    x = indices[1][0] - center[0]
-    y = center[1] - indices[0][0]
-    contours_points = np.array([x, y])
+    points = list()
+    x = indices[1][0] - centerSmall[0]
+    y = centerSmall[1] - indices[0][1]
     rho = np.sqrt(x ** 2 + y ** 2)
     theta = np.arctan2(y, x)
-
     if theta < 0:
         theta = theta + 2 * np.pi
     print(len(indices[:]))
-    contours_theta_rho = np.array([theta, rho])
-
+    contoursThetaRho = np.array([theta, rho])
+    print("Printing Theta Rho:")
+    print(contoursThetaRho)
     for i in range(1, len(indices[0])):
-        x = indices[1][i] - center[0]
-        y = center[1] - indices[0][i]
+        x = indices[1][i] - centerSmall[0]
+        y = centerSmall[1] - indices[0][i]
         rho = np.sqrt(x ** 2 + y ** 2)
         theta = (np.arctan2(y, x))
         if theta < 0:
             theta = theta + 2 * np.pi
-        # why not b.append([theta, rho]) or b.append((theta,rho))
-        b = np.array([theta, rho])                                              # [[theta,rho]]
-        contours_theta_rho = np.column_stack((contours_theta_rho.T, b)).T
-        b = np.array([x, y])
-        contours_points = np.column_stack((contours_points.T, b)).T
+        points.append((rho, theta))
 
-    contours_theta_rho_sorted = np.lexsort((contours_theta_rho[:, 1], contours_theta_rho[:, 0]))
-    contours_theta_rho_sorted = contours_theta_rho[contours_theta_rho_sorted]
-    return contours_theta_rho_sorted
+    return points
 
 
 def points_histogram(rhos):
@@ -190,10 +185,6 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             # Sort by radius in order of increasing angle.
             points_temp.sort(key=operator.itemgetter(1))
 
-            # This may be too local.
-            # Disabled temporarily
-            # points_temp = normalize_groove_data(points_temp)
-
             grooves.append(Groove(points_temp, None, None))
             points_temp = list()
 
@@ -218,19 +209,3 @@ def points_reject_theta_outliers(data, m=2):
     median_d = np.median(d)
     s = d/median_d if median_d else 0
     return [point for i, point in enumerate(data) if s[i] < m]
-
-
-def normalize_groove_data(groove_data):
-
-    rhos = [sample[0] for sample in groove_data]
-    thetas = [sample[1] for sample in groove_data]
-
-    average_rho = np.average(rhos)
-    shifted_rhos = [rho - average_rho for rho in rhos]
-
-    max_rho = max(shifted_rhos)
-    normalized_rhos = [rho / max_rho for rho in shifted_rhos]
-
-    normalized_groove_data = [(normalized_rhos[i], thetas[i]) for i in range(len(groove_data))]
-
-    return normalized_groove_data
