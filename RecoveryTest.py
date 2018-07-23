@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import cv2 as cv
 print(cv.__version__)
 import numpy as np
-import GrooveDetection
+import Detection
 
 bw = cv.imread('tbcfc2.jpg', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
@@ -83,13 +83,13 @@ points_truncated = [point for point in points if 2 <= point[1] <= 4.5 and point[
 #plt.scatter([point[1] for point in points_truncated], [point[0] for point in points_truncated], s=0.2)
 #plt.show()
 
-h, bin_edges = GrooveDetection.points_histogram([point[0] for point in points_truncated])
+h, bin_edges = Detection.points_histogram([point[0] for point in points_truncated])
 #plt.hist([point[0] for point in points_truncated], bin_edges)
 #plt.show()
 
 # To do: the inclusion threshold would be a good thing to expose to the user
-grooves = GrooveDetection.points_to_grooves(h, bin_edges, 1000, points_truncated)
+grooves = Detection.points_to_grooves(h, bin_edges, 1000, points_truncated)
 
 for groove in grooves:
-    plt.scatter(groove.get_theta_data(), groove.get_rho_data(), s=0.2)
+    plt.scatter(groove.get_theta_axis(), groove.get_rho_axis(), s=0.2)
     plt.show()

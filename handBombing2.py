@@ -2,20 +2,25 @@ from matplotlib import pyplot as plt
 import cv2 as cv
 print(cv.__version__)
 import numpy as np
-bw = cv.imread('Images/ymmly1.jpg', cv.IMREAD_GRAYSCALE)
+bw = cv.imread('tbcfc2.jpg', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
+
+print("Locating centre of record...")
+bilateral_filtered_image = cv.bilateralFilter(bw, 5, 300, 175)
+edges = cv.Canny(bilateral_filtered_image, 75, 200)
+plt.imshow(edges)
 
 # IF THIS NEXT LINE CAUSES TROUBLE, JUST REMOVE IT, IT IS SUPPOSED TO SPEED THINGS UP USING OPENCL
 # REFLINK: https://www.learnopencv.com/opencv-transparent-api/
-bwUmat = cv.UMat(bw)
-height, width = bw.shape
-print("The original image height is ", height)
-print("The original image width is ", width)
-black = np.zeros(bw.shape, np.uint8)
+# bwUmat = cv.UMat(bw)
+# height, width = bw.shape
+# print("The original image height is ", height)
+# print("The original image width is ", width)
+# black = np.zeros(bw.shape, np.uint8)
 # bwCircle = bw.copy()
 # bwCircleUmat = cv.UMat(bwCircle)
 # bwCircleBlurred = cv.UMat.get(cv.medianBlur(bwCircleUmat, 15))
-# # plt.imshow(bwCircle),plt.show()
+# plt.imshow(bwCircle),plt.show()
 # print("Blurred image for circle finding")
 # rows = bwCircle.shape[0]
 #
@@ -86,8 +91,8 @@ plt.imshow(fin), plt.show()
 # Try to convert all contour data to r, theta data
 
 # Make a huge xy data set of every xy contour point
-x = centerSmall[0] + contours[0][0, 0, 0]
-y = centerSmall[1] + contours[0][0, 0, 1]
+x = contours[0][0, 0, 0] - centerSmall[0]
+y = contours[0][0, 0, 1] - centerSmall[1]
 rho = np.sqrt(x**2 + y**2)
 theta = np.arctan2(y, x)
 
@@ -96,8 +101,8 @@ print("Printing Contours XY:")
 print(contoursThetaRho)
 for i in range(1, len(contours)):
     for j in range(0, len(contours[i])):
-        x = centerSmall[0] + contours[i][j, 0, 0]
-        y = centerSmall[1] + contours[i][j, 0, 1]
+        x = contours[i][j, 0, 0] - centerSmall[0]
+        y = contours[i][j, 0, 1] - centerSmall[1]
         rho = np.sqrt(x**2 + y**2)
         theta = (np.arctan2(y, x))
         b = np.array([theta, rho])

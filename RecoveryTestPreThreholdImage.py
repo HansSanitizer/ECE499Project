@@ -1,11 +1,11 @@
 from matplotlib import pyplot as plt
 import cv2 as cv
-print(cv.__version__)
 import numpy as np
-import GrooveDetection
-import DataConversion
+import Detection
+import Conversion
 
-bw = cv.imread('Images/tbcfc2ThreshTest.tif', cv.IMREAD_GRAYSCALE)
+
+bw = cv.imread('scb.tif', cv.IMREAD_GRAYSCALE)
 #plt.imshow(bw, cmap='gray'), plt.show()
 
 height, width = bw.shape
@@ -24,10 +24,11 @@ black2 = np.zeros(bw.shape, np.uint8)
 circOut = cv.circle(black2, centerSmall, (radiusSmall + 1100), (255, 255, 255), -1)
 circIn = cv.circle(black2, centerSmall, (radiusSmall + 1000), (0, 0, 0), -1)
 fin = cv.bitwise_and(bw, black2)
-plt.imshow(fin), plt.show()
+# plt.imshow(fin), plt.show()
 
 indices = np.where(fin > [0])
 
+# I need Jared to explain wht this is doing. I have no idea how it knows its following data.
 rhos = list()
 points = list()
 x = indices[1][0] - centerSmall[0]
@@ -50,25 +51,31 @@ for i in range(1, len(indices[0])):
         theta = theta + 2*np.pi
     points.append((rho, theta))
 
-plt.scatter([point[1] for point in points], [point[0] for point in points], s=0.2)
-plt.show()
+#plt.scatter([point[1] for point in points], [point[0] for point in points], s=0.2)
+#plt.show()
 
 # Ignoring the distorted (?) regions.
-points_truncated = [point for point in points if 2 <= point[1] <= 4.5 and point[0] > 3105]
+#points_truncated = [point for point in points if 2 <= point[1] <= 4.5 and point[0] > 3105]
 #plt.scatter([point[1] for point in points_truncated], [point[0] for point in points_truncated], s=0.2)
 #plt.show()
 
-h, bin_edges = GrooveDetection.points_histogram([point[0] for point in points_truncated])
+h, bin_edges = Detection.points_histogram([point[0] for point in points_truncated])
 #plt.hist([point[0] for point in points_truncated], bin_edges)
 #plt.show()
 
 # To do: the inclusion threshold would be a good thing to expose to the user
-grooves = GrooveDetection.points_to_grooves(h, bin_edges, 1000, points_truncated)
+grooves = Detection.points_to_grooves(h, bin_edges, 1000, points_truncated)
 
-for groove in grooves:
-    plt.scatter(groove.get_theta_axis(), groove.get_rho_axis(), s=0.2)
-    plt.show()
-    irregular_audio = DataConversion.IrregularAudio(groove)
-    audio = DataConversion.Audio(irregular_audio)
-    plt.scatter(audio.get_time_axis(), audio.get_amplitude_axis(), s=0.2)
-    plt.show()
+irregular_audio = Conversion.Stylus()
+
+for i, groove in enumerate(grooves):
+    #plt.scatter(groove.get_theta_axis(), groove.get_rho_axis(), s=0.2), plt.show()
+    irregular_audio.append(Conversion.Stylus(groove, i + 1))
+
+# print("Max Gap: " + str(irregular_audio.get_max_gap()))
+plt.scatter(range(len(irregular_audio.data)), irregular_audio.data, s=0.2), plt.show()
+
+# audio = DataConversion.Audio(48000, irregular_audio)
+# plt.scatter([i for i in range(len(audio.data))], audio.data, s=0.2), plt.show()
+
+Conversion.audio_to_wave(irregular_audio.data)

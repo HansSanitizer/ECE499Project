@@ -9,7 +9,10 @@
 """
 import cv2 as cv
 import numpy as np
+import pandas as pd
 import operator
+import Data
+
 
 
 class Groove:
@@ -24,11 +27,11 @@ class Groove:
 
     def get_theta_axis(self):
 
-        return [point[1] for point in self.angular_data]
+        return [point[0] for point in self.angular_data]
 
     def get_rho_axis(self):
 
-        return [point[0] for point in self.angular_data]
+        return [point[1] for point in self.angular_data]
 
 
 def load_grey_scale(path):
@@ -106,11 +109,20 @@ def skeleton_to_points(indices, center):
     return points
 
 
-def points_histogram(rhos):
+def average_points(points=list(), window_size=20):
 
-    histogram, bin_edges = np.histogram(rhos, bins="fd")
+    x = Data.x_in_points(points)
+    y = Data.y_in_points(points)
 
-    return histogram, bin_edges
+    d = pd.DataFrame({'x': x, 'y': y})
+    averaged_d = d.rolling(window_size).mean()
+
+    x = averaged_d['x'].values.tolist()
+    y = averaged_d['y'].values.tolist()
+
+    averaged_points = [Data.Point(x[i], y[i]) for i in range(len(d))]
+
+    return averaged_points
 
 
 def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
@@ -129,8 +141,6 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
         h: [30, 291, 546, ...]
         bin_edges: [-3.20, -1.83, -0.45, ..]
         bin_0 contains 30 values and it spans [-3.20, -1.83) (last bin is [])
-
-        There are going to be so many searches...
 
         I'm assuming that points is a list of tuples (rho, theta) sorted from max to min rho.
         But I'm not going to hack up skeleton_to_points yet.
@@ -165,9 +175,9 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
                 This will go through the entire list. Might be worth finding a better way.
             """
             if histogram_bin != len(histogram):
-                [points_temp.append(point) for point in points if (bin_edge_min <= point[0] < bin_edge_max)]
+                [points_temp.append(point) for point in points if (bin_edge_min <= point[1] < bin_edge_max)]
             else:
-                [points_temp.append(point) for point in points if (bin_edge_min <= point[0] <= bin_edge_max)]
+                [points_temp.append(point) for point in points if (bin_edge_min <= point[1] <= bin_edge_max)]
 
         """ If the current bin is invalid, and the last bin was valid, then
             we've collected the points in a groove.
@@ -179,8 +189,8 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
         if this_bin_valid is False and last_bin_valid is True:
 
             # I'm not convinced that rejecting outliers is useful.
-            points_temp = points_reject_rho_outliers(points_temp, m=3)
-            points_temp = points_reject_theta_outliers(points_temp)
+            #points_temp = points_reject_rho_outliers(points_temp, m=3)
+            #points_temp = points_reject_theta_outliers(points_temp)
 
             # Sort by radius in order of increasing angle.
             points_temp.sort(key=operator.itemgetter(1))
@@ -189,6 +199,9 @@ def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
             points_temp = list()
 
         last_bin_valid = this_bin_valid
+
+    if len(grooves) == 0:
+        raise RuntimeError('no grooves were found, try adjusting the inclusion threshold and number of bins used.')
 
     return grooves
 

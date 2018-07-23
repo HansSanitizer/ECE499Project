@@ -1,4 +1,4 @@
-import DataConversion
+import Conversion
 import numpy as np
 
 
@@ -19,6 +19,6 @@ def get_samples(duration=5, sample_period=1/float(48000)):
 
 
 samples = get_samples()
-filtered_samples = DataConversion.filter_lp(samples)
-DataConversion.audio_to_wave(samples, 'FilterTest_unfiltered')
-DataConversion.audio_to_wave(filtered_samples, 'FilterTest_filtered')
+filtered_samples = Conversion.filter_lp(samples)
+Conversion.audio_to_wave(samples, 'FilterTest_unfiltered')
+Conversion.audio_to_wave(filtered_samples, 'FilterTest_filtered')
