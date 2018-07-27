@@ -109,20 +109,6 @@ def skeleton_to_points(indices, center):
     return points
 
 
-def average_points(points=list(), window_size=20):
-
-    x = Data.x_in_points(points)
-    y = Data.y_in_points(points)
-
-    d = pd.DataFrame({'x': x, 'y': y})
-    averaged_d = d.rolling(window_size).mean()
-
-    x = averaged_d['x'].values.tolist()
-    y = averaged_d['y'].values.tolist()
-
-    averaged_points = [Data.Point(x[i], y[i]) for i in range(len(d))]
-
-    return averaged_points
 
 
 def points_to_grooves(histogram, bin_edges, inclusion_threshold, points=list()):
