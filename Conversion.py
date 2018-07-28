@@ -76,7 +76,7 @@ def time_axis_unique(angular_data):
     return unique
 
 
-def rtime_to_velocity(rtime_data, sample_rate=48000, threshold=1):
+def rtime_to_velocity(rtime_data):
     """
     Converts time data to resampled velocity data.
     :param rtime_data:

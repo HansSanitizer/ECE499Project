@@ -132,6 +132,13 @@ def angular_to_rtime(points_angular, angular_velocity):
 
 # Remember, this is generating a pair for points that don't have one.
 def get_pairs(points):
+    """
+    Returns pairs of points. If a point is a lone occurrence, a corresponding point is generated so that
+    averaging works out.
+
+    :param points:
+    :return:
+    """
 
     unique_x = get_unique(x_in_points(points))
     x_axis = x_in_points(points)
