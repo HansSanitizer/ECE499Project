@@ -76,43 +76,54 @@ def time_axis_unique(angular_data):
     return unique
 
 
-def rtime_to_velocity(time_data, sample_rate=48000):
+def rtime_to_velocity(rtime_data, sample_rate=48000, threshold=1):
     """
     Converts time data to resampled velocity data.
-    :param time_data:
+    :param rtime_data:
     :param sample_rate:
     :return:
     """
     velocities = list()
 
     window_width = 15
-    n_points = len(time_data)
+    n_points = len(rtime_data)
     n_chunks = n_points/window_width
 
-    t = 0
+    # t = 0
 
-    for i in range(1, n_chunks):
-        chunk, center, duration = get_chunk(i, time_data, window_width)
-        t = t + duration/2
-        # To do: figure out why you get a poorly conditioned warning.
-        poly = np.polyfit(Data.t_in_points(chunk), Data.r_in_points(chunk), 4)
-        poly_der = np.polyder(poly)
-        # To do: sample velocity at multiples of sampling period, not the center of the window.
-        # resample_poly(poly_der, duration)
-        velocities.append((np.polyval(poly_der, t), t))
+    t = Data.t_in_points(rtime_data)
+    r = Data.r_in_points(rtime_data)
+
+    for i in range(0, len(rtime_data)-1):
+
+        v = (r[i + 1] - r[i])/(t[i + 1] - t[i])
+        t_average = (t[i] + t[i+1])/2
+        velocities.append((v, t_average))
+
+    # for i in range(1, n_chunks):
+    #     chunk, center, duration = get_chunk(i, rtime_data, window_width)
+    #     t = t + duration/2
+    #     # To do: figure out why you get a poorly conditioned warning.
+    #     poly = np.polyfit(Data.t_in_points(chunk), Data.r_in_points(chunk), 3)
+    #     poly_der = np.polyder(poly)
+    #     # To do: sample velocity at multiples of sampling period, not the center of the window.
+    #     # resample_poly(poly_der, duration)
+    #     velocities.append((np.polyval(poly_der, t), t))
 
     return velocities
 
 
-def get_chunk(i, time_data, width=15):
+def get_chunk(i, rtime_data, width=15):
 
     center = width/2
     wing_size = center - 1
     chunk_center = i * center
     start = chunk_center - wing_size
     end = chunk_center + wing_size
-    chunk = time_data[start:end]
-    duration = Data.t_in_points(chunk)[len(chunk)-1] - Data.t_in_points(chunk)[0]
+    chunk = rtime_data[start:end]
+    t_final = Data.t_in_points(chunk)[len(chunk) - 1]
+    t_initial = Data.t_in_points(chunk)[0]
+    duration = t_final - t_initial
 
     return chunk, chunk_center, duration
 
