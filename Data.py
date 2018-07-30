@@ -6,6 +6,13 @@ import scipy.optimize as optimize
 class PointRect:
 
     def __init__(self, x=0, y=0):
+        """
+
+        Container for rectangular data points.
+
+        :param x: x coordinate
+        :param y: y coordinate
+        """
 
         self.x = x
         self.y = y
@@ -14,6 +21,13 @@ class PointRect:
 class PointAngular:
 
     def __init__(self, r=0, theta=0):
+        """
+
+        Container for angular data points.
+
+        :param r: radius coordinate
+        :param theta: theta coordinate
+        """
 
         self.r = r
         self.theta = theta
@@ -22,58 +36,106 @@ class PointAngular:
 class PointRtime:
 
     def __init__(self, r=0, t=0):
+        """
+
+        Container for time-radius data points.
+        (Why is it called R-time instead of T-radius? Because it sounded better.)
+
+        :param r: radius coordinate
+        :param t: time coordinate
+        """
 
         self.r = r
         self.t = t
 
 
-def x_in_points(points=list()):
+def get_x_axis(points=list()):
+    """
+
+    For a list of point objects, return the x-axis.
+
+    :param points: list of rectangular points
+    :return: list of x-axis coordinates
+    """
     return [point.x for point in points]
 
 
-def y_in_points(points=list()):
+def get_y_axis(points=list()):
+    """
+
+    For a list of point objects, return y-axis.
+
+    :param points: list of rectangular points
+    :return: list of y-axis coordinates
+    """
     return [point.y for point in points]
 
 
-def r_in_points(points=list()):
+def get_r_axis(points=list()):
+    """
+
+    For a list of point objects, return r-axis.
+
+    :param points: list of angular or r-time points
+    :return: list of r-axis values
+    """
     return [point.r for point in points]
 
 
-def theta_in_points(points=list()):
+def get_theta_axis(points=list()):
+    """
+
+    For a list of point objects, return theta-axis.
+
+    :param points: list of angular points
+    :return: list of theta-axis values
+    """
     return [point.theta for point in points]
 
 
-def t_in_points(points=list()):
+def get_t_axis(points=list()):
+    """
+
+    For a list of point objects, return t-axis.
+
+    :param points: list of r-time points
+    :return: list of t-ais values.
+    """
     return [point.t for point in points]
 
 
-def points_to_tuples(points=list()):
+def average_points(points=list(), window_width=20):
+    """
 
-    tuples = list()
+    Performs a rolling average of points in a 2D list.
 
-    for point in points:
-        tuples.append((point.x, point.y))
+    :param points: 2D data set
+    :param window_width: width of averaging window
+    :return:
+    """
 
-    return tuples
-
-
-def average_points(points=list(), window_size=20):
-
-    x = x_in_points(points)
-    y = y_in_points(points)
+    x = get_x_axis(points)
+    y = get_y_axis(points)
 
     d = pd.DataFrame({'x': x, 'y': y})
-    averaged_d = d.rolling(window_size).mean()
+    averaged_d = d.rolling(window_width).mean()
 
     x = averaged_d['x'].values.tolist()
     y = averaged_d['y'].values.tolist()
 
-    averaged_points = [PointRect(x[i], y[i]) for i in range(window_size, len(d))]
+    averaged_points = [PointRect(x[i], y[i]) for i in range(window_width, len(d))]
 
     return averaged_points
 
 
 def get_unique(data):
+    """
+
+    Returns unique elements of a list.
+
+    :param data: list of data
+    :return: unique elements of data
+    """
 
     seen = set()
     unique = list()
@@ -86,14 +148,17 @@ def get_unique(data):
     return unique
 
 
-def rectangular_to_angular(points_rect, pixel_dimensions):
+def rectangular_to_angular(points, pixel_dimensions):
     """
+
+    Converts points in rectangular (pixel) coordinates to real-space (meters) angular coordinates.
+
     To do: theta_last calculation isn't entirely accurate. The radius at the end points of the arc
     are subtly different, and I'm not sure if the diff in x coord translates to arc length.
 
-    :param points_rect:
-    :param pixel_dimensions:
-    :return:
+    :param points: list of rectangular points
+    :param pixel_dimensions: tuple of form (width, height) in meters
+    :return: list of angular points
     """
 
     points_angular = list()
@@ -101,7 +166,7 @@ def rectangular_to_angular(points_rect, pixel_dimensions):
     x_last = 0
     theta_last = 0
 
-    for point in points_rect:
+    for point in points:
 
         x_new = point.x * pixel_dimensions[0]
         y = point.y * pixel_dimensions[1]
@@ -111,11 +176,18 @@ def rectangular_to_angular(points_rect, pixel_dimensions):
         x_last = x_new
         theta_last = theta_new
 
-
     return points_angular
 
 
 def angular_to_rtime(points_angular, angular_velocity):
+    """
+
+    Converts points in real-space (meters) angular coordinates to the r-time coordinate system.
+
+    :param points_angular: list of angular points
+    :param angular_velocity: angular velocity of rotation of the record
+    :return: list of points in r-time coordinates
+    """
 
     points_rtime = list()
     t = 0
@@ -130,18 +202,20 @@ def angular_to_rtime(points_angular, angular_velocity):
 
     return points_rtime
 
-# Remember, this is generating a pair for points that don't have one.
+
 def get_pairs(points):
     """
-    Returns pairs of points. If a point is a lone occurrence, a corresponding point is generated so that
-    averaging works out.
 
-    :param points:
-    :return:
+    Returns pairs (along the x-axis) of points. If a point is a lone occurrence, then a corresponding point
+    is generated so that averaging works out. This is non-ideal; there is no way to know if the lone point
+    was valid.
+
+    :param points: list of rectangular points
+    :return: pairs of rectangular points
     """
 
-    unique_x = get_unique(x_in_points(points))
-    x_axis = x_in_points(points)
+    unique_x = get_unique(get_x_axis(points))
+    x_axis = get_x_axis(points)
     pairs = list()
 
     for x in unique_x:
@@ -167,6 +241,15 @@ def get_pairs(points):
 
 
 def discard_bad_pairs(points, pixel_dimensions, max_width=200*10**-6):
+    """
+
+    Discards pairs of points if their y-axis spacing is larger than the maximum width.
+
+    :param points: list of rectangular points
+    :param pixel_dimensions: tuple of form (width, height) in meters
+    :param max_width: maximum expected width in meters
+    :return: list of good point-pairs
+    """
 
     pairs = get_pairs(points)
     good_points = list()
@@ -184,6 +267,9 @@ def discard_bad_pairs(points, pixel_dimensions, max_width=200*10**-6):
     return good_points
 
 
+# Dead code below this line.
+
+
 def error_function(theta, r0, c):
 
     return r0 + c * theta
@@ -191,7 +277,7 @@ def error_function(theta, r0, c):
 
 def minimize_error_function(points):
 
-    popt, pcov = optimize.curve_fit(error_function, theta_in_points(points), r_in_points(points))
+    popt, pcov = optimize.curve_fit(error_function, get_theta_axis(points), get_r_axis(points))
 
     return popt[0], popt[1]
 
