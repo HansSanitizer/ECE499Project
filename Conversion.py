@@ -8,9 +8,15 @@ import Data
 
 class Stylus:
 
-    def __init__(self, rtime_data=None, rotation=1):
+    def __init__(self, rtime_data=list()):
+        """
 
-            self.data = rtime_to_velocity(rtime_data)
+        Object that represents the phonograph stylus that is essentially a container for time-velocity data.
+
+        :param rtime_data: list of points in r-time coordinates.
+        """
+
+        self.data = rtime_to_velocity(rtime_data)
 
     def __len__(self):
 
@@ -25,11 +31,11 @@ class Stylus:
 
     def get_velocity_axis(self):
 
-        return [sample[0] for sample in self.data]
+        return [data[0] for data in self.data]
 
     def get_time_axis(self):
 
-        return [sample[1] for sample in self.data]
+        return [data[1] for data in self.data]
 
 
 class Audio:
@@ -56,43 +62,26 @@ class Audio:
             raise TypeError(' must append Audio object.')
 
 
-# To do: this may be unnecessary because of the poly fit method.
-def time_axis_unique(angular_data):
-    """
-    We have issues with duplicates in the time axis causing div 0 errors down the line.
-
-    :param angular_data: groove.angular_data
-    :return: data points with a unique time axis-value
-    """
-
-    seen = set()
-    unique = list()
-
-    for x in angular_data:
-        if x[1] not in seen:
-            unique.append(x)
-            seen.add(x[1])
-
-    return unique
-
-
 def rtime_to_velocity(rtime_data):
     """
-    Converts time data to resampled velocity data.
-    :param rtime_data:
-    :param sample_rate:
-    :return:
+
+    Converts rtime data to velocity data.
+
+    :param rtime_data: list of points in r-time
+    :return: list of velocity data as tuple in form of (time, velocity)
     """
+
+    # Commented lines are elements of a more sophisticated implementation that was abandoned due to time constraints.
     velocities = list()
 
-    window_width = 15
-    n_points = len(rtime_data)
-    n_chunks = n_points/window_width
+    # window_width = 15
+    # n_points = len(rtime_data)
+    # n_chunks = n_points/window_width
 
     # t = 0
 
-    t = Data.t_in_points(rtime_data)
-    r = Data.r_in_points(rtime_data)
+    t = Data.get_t_axis(rtime_data)
+    r = Data.get_r_axis(rtime_data)
 
     for i in range(0, len(rtime_data)-1):
 
@@ -113,38 +102,43 @@ def rtime_to_velocity(rtime_data):
     return velocities
 
 
-def get_chunk(i, rtime_data, width=15):
-
-    center = width/2
-    wing_size = center - 1
-    chunk_center = i * center
-    start = chunk_center - wing_size
-    end = chunk_center + wing_size
-    chunk = rtime_data[start:end]
-    t_final = Data.t_in_points(chunk)[len(chunk) - 1]
-    t_initial = Data.t_in_points(chunk)[0]
-    duration = t_final - t_initial
-
-    return chunk, chunk_center, duration
-
-
-def resample_poly(p, duration, time_bias):
-
-    # To do: implement
-
-    return
-
-
-def normalize_amplitudes(amplitudes):
-    max_amplitude = max(np.abs(amplitudes))
-    return [n/max_amplitude for n in amplitudes]
+# def get_chunk(i, rtime_data, width=15):
+#     """
+#
+#     Returns a chunk of rtime data from a larger data set. For abandoned implementation of rtime_to_velocity.
+#
+#     :param i:
+#     :param rtime_data:
+#     :param width:
+#     :return:
+#     """
+#
+#     center = width/2
+#     wing_size = center - 1
+#     chunk_center = i * center
+#     start = chunk_center - wing_size
+#     end = chunk_center + wing_size
+#     chunk = rtime_data[start:end]
+#     t_final = Data.get_t_axis(chunk)[len(chunk) - 1]
+#     t_initial = Data.get_t_axis(chunk)[0]
+#     duration = t_final - t_initial
+#
+#     return chunk, chunk_center, duration
 
 
-def audio_to_wave(audio, name='recovered_audio'):
+def audio_to_wave(audio, file_name='recovered_audio'):
+    """
+
+    Converts an audio object to a wave-file.
+
+    :param audio: audio object
+    :param file_name: string
+    :return: nothing
+    """
 
     audio_packed = pack_audio(audio)
     audio_packed_str = packed_to_string(audio_packed)
-    f = wave.open(name + '.wav', 'w')
+    f = wave.open(file_name + '.wav', 'w')
     f.setnchannels(1)
     f.setsampwidth(4)
     f.setframerate(48000)
@@ -155,11 +149,19 @@ def audio_to_wave(audio, name='recovered_audio'):
 
 
 def pack_audio(amplitudes):
+    """
+
+    Returns byte string of packed audio.
+
+    :param amplitudes:
+    :return:
+    """
 
     return [struct.pack('>f', amplitude) for amplitude in amplitudes]
 
 
 def packed_to_string(packed_audio):
+
 
     audio_packed_str = str()
 
@@ -170,6 +172,15 @@ def packed_to_string(packed_audio):
 
 
 def filter_lp(data, order=3, wn=0.5):
+    """
+
+    Applies a low-pass filter on audio data.
+
+    :param data: audio data
+    :param order:
+    :param wn:
+    :return: filtered audio-data
+    """
 
     b, a = signal.butter(order, wn)
     filtered_audio = signal.lfilter(b, a, data)
